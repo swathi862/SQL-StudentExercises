@@ -122,4 +122,4 @@
 --SELECT Student.FirstName, Student.LastName, Exercise.Name FROM AssignedExercise LEFT JOIN Student ON AssignedExercise.StudentId = Student.Id LEFT JOIN Exercise ON AssignedExercise.ExerciseId = Exercise.Id;
 
 --Return a list of student names along with the count of exercises assigned to each student.
---SELECT CONCAT(Student.FirstName, ' ',Student.LastName) AS 'Full Name', COUNT(AssignedExercise.StudentId) AS 'Number of Assigned Exercises' FROM AssignedExercise LEFT JOIN Student ON AssignedExercise.StudentId = Student.Id GROUP BY CONCAT(Student.FirstName, ' ',Student.LastName);
+--SELECT CONCAT(Student.FirstName, ' ', Student.LastName) AS 'Full Name', COUNT(AssignedExercise.StudentId) AS 'Number of Assigned Exercises' FROM AssignedExercise LEFT JOIN Student ON AssignedExercise.StudentId = Student.Id GROUP BY CONCAT(Student.FirstName, ' ', Student.LastName);
