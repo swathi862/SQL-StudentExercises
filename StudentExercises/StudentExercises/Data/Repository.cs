@@ -1,6 +1,7 @@
 ﻿using StudentExercises.Models;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Data.SqlClient;
 using System.Diagnostics.SymbolStore;
 using System.Linq;
@@ -224,57 +225,6 @@ namespace StudentExercises.Data
             }
         }
 
-        public List<AssignedExercise> GetAllAssignedExercises()
-        {
-            using (SqlConnection conn = Connection)
-            {
-                conn.Open();
-
-                using (SqlCommand cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = "SELECT CONCAT(Student.FirstName, ' ', Student.LastName), Exercise.Name FROM AssignedExercise LEFT JOIN Student ON AssignedExercise.StudentId = Student.Id LEFT JOIN Exercise ON AssignedExercise.ExerciseId = Exercise.Id";
-
-                    SqlDataReader reader = cmd.ExecuteReader();
-
-                    List<AssignedExercise> assignedExercises = new List<AssignedExercise>();
-
-                    while (reader.Read())
-                    {
-                        int idColumnPosition = reader.GetOrdinal("AssignedExercise.Id");
-                        int idValue = reader.GetInt32(idColumnPosition);
-
-                        int StudentIdColumnPosition = reader.GetOrdinal("StudentId");
-                        int studentdIdValue = reader.GetInt32(StudentIdColumnPosition); 
-
-                        int ExerciseIdColumnPosition = reader.GetOrdinal("ExerciseId");
-                        int exerciseIdValue = reader.GetInt32(ExerciseIdColumnPosition);
-
-                        //int FirstNameColumnPosition = reader.GetOrdinal("FirstName");
-                        //string firstNameValue = reader.GetString(FirstNameColumnPosition);
-
-                        //int LastNameColumnPosition = reader.GetOrdinal("LastName");
-                        //string lastNameValue = reader.GetString(LastNameColumnPosition);
-
-                        //int ExerciseNameColumnPosition = reader.GetOrdinal("Name");
-                        //string exNameValue = reader.GetString(ExerciseNameColumnPosition);
-
-                        AssignedExercise assignedExercise = new AssignedExercise
-                        {
-                            Id = idValue,
-                            StudentId = studentdIdValue,
-                            ExerciseId = exerciseIdValue
-                        };
-
-                        assignedExercises.Add(assignedExercise);
-                    }
-
-                    reader.Close();
-
-                    return assignedExercises;
-                }
-            }
-        }
-
         public List<Student> GetAllStudents()
         {
             using (SqlConnection conn = Connection)
@@ -303,60 +253,165 @@ namespace StudentExercises.Data
                         int CohortNameColumnPosition = reader.GetOrdinal("CohortName");
                         string cohortNameValue = reader.GetString(CohortNameColumnPosition);
 
-                        //if (students)
                         Student student = new Student
                         {
+                            Id = idValue,
                             FirstName = firstNameValue,
                             LastName = lastNameValue,
                             Cohort = new Cohort { Name = cohortNameValue }
-                            //SlackHandle = slackValue,
-                            //Cohort = new Cohort { Name = cohortNameValue }
                         };
 
-                        
-                        
 
-                        if (students.Any(stud => stud.FirstName == student.FirstName) == false)
+
+                        //Conditional for if the student does NOT already exist in the 'students' list
+                        if (students.Any(stud => stud.Id == student.Id) == false)
                         {
+                            //Conditional for if the student has atleast one exercise assigned to them, this code runs; reads as if "ExerciseName" does NOT return a null value
                             if (!reader.IsDBNull(reader.GetOrdinal("ExerciseName")))
                             {
+                                //Create instance of Exercise
                                 Exercise exercise = new Exercise
                                 {
                                     Name = reader.GetString(reader.GetOrdinal("ExerciseName")),
-                                    Language = "hi"
+                                    Language = ""
                                 };
 
+                                //Add it to the student's assignedExercises list
                                 student.assignedExercises.Add(exercise);
 
                             }
-                            
+                            //Add the student to the students list to be returned
                             students.Add(student);
                         }
+
+                        //If the student does already exist in the students list (i.e. the same student prints multiple times if they have more than one exercise assigned to them)
                         else
                         {
+                            //If "ExerciseName" does NOT return a null value; meaning the existing student has more exercises assigned to them
                             if (!reader.IsDBNull(reader.GetOrdinal("ExerciseName")))
                             {
+                                //Create instance of exercise
                                 Exercise exercise = new Exercise
                                 {
                                     Name = reader.GetString(reader.GetOrdinal("ExerciseName")),
-                                    Language = "hi"
+                                    Language = ""
                                 };
 
-                                students.FirstOrDefault(s => s.FirstName == student.FirstName).assignedExercises.Add(exercise);
+                                //Add the exercise to the student's assignedExercises list; FirstOrDefault refers to the first (or default) student id that pops up and matches
+                                students.FirstOrDefault(s => s.Id == student.Id).assignedExercises.Add(exercise);
                             }
 
                         }
-                        
+
                     }
 
                     reader.Close();
 
                     return students;
+
                 }
             }
         }
 
+        //Write a method in the Repository class that accepts an Exercise and a Cohort and assigns that exercise to
+        //    each student in the cohort IF and ONLY IF the student has not already been assigned the exercise.
+        public void AssignExerciseToCohort(Exercise exercise, Cohort cohort)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                conn.Open();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT Student.Id, FirstName, LastName, CohortId, Exercise.Name AS ExerciseName FROM Student LEFT JOIN AssignedExercise ON Student.Id = AssignedExercise.StudentId LEFT JOIN Exercise ON AssignedExercise.ExerciseId = Exercise.Id WHERE Student.CohortId = @cohortid; ";
+                    cmd.Parameters.Add(new SqlParameter("@cohortid", cohort.Id));
 
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        int idColumnPosition = reader.GetOrdinal("Id");
+                        int idValue = reader.GetInt32(idColumnPosition);
+
+                        int FirstNameColumnPosition = reader.GetOrdinal("FirstName");
+                        string firstNameValue = reader.GetString(FirstNameColumnPosition);
+
+                        int LastNameColumnPosition = reader.GetOrdinal("LastName");
+                        string lastNameValue = reader.GetString(LastNameColumnPosition);
+
+                        int CohortIdColumnPosition = reader.GetOrdinal("CohortId");
+                        int cohortIdValue = reader.GetInt32(CohortIdColumnPosition);
+
+                        Student student = new Student
+                        {
+                            Id = idValue,
+                            FirstName = firstNameValue,
+                            LastName = lastNameValue,
+                            Cohort = new Cohort { Id = cohortIdValue }
+                        };
+
+                        if (cohort.listOfStudents.Any(stud => stud.Id == student.Id) == false)
+                        {
+                            //Conditional for if the student has atleast one exercise assigned to them, this code runs; reads as if "ExerciseName" does NOT return a null value
+                            if (!reader.IsDBNull(reader.GetOrdinal("ExerciseName")))
+                            {
+                                //Create instance of Exercise
+                                Exercise existingExercise = new Exercise
+                                {
+                                    Name = reader.GetString(reader.GetOrdinal("ExerciseName")),
+                                    Language = ""
+                                };
+
+                                //Add it to the student's assignedExercises list
+                                student.assignedExercises.Add(exercise);
+
+                            }
+                            //Add the student to the cohort's list of students
+                            cohort.listOfStudents.Add(student);
+                        }
+
+                        //If the student does already exist in the cohort's list (i.e. the same student prints multiple times if they have more than one exercise assigned to them)
+                        else
+                        {
+                            //If "ExerciseName" does NOT return a null value; meaning the existing student has more exercises assigned to them
+                            if (!reader.IsDBNull(reader.GetOrdinal("ExerciseName")))
+                            {
+                                //Create instance of exercise
+                                Exercise existingExercise = new Exercise
+                                {
+                                    Name = reader.GetString(reader.GetOrdinal("ExerciseName")),
+                                    Language = ""
+                                };
+
+                                //Add the exercise to the student's assignedExercises list; FirstOrDefault refers to the first (or default) student id that pops up and matches
+                                cohort.listOfStudents.FirstOrDefault(s => s.Id == student.Id).assignedExercises.Add(existingExercise);
+                            }
+
+                        }
+                    }
+                    reader.Close();
+
+                    //By now, each student in the cohort should have a list of assigned exercises, so we can grab each student in the cohort to check thier assignedExercises
+                    foreach (Student cohortStudent in cohort.listOfStudents)
+                    {
+                            //if the student has not been assigned the exercise, assign it
+                            if (cohortStudent.assignedExercises.Exists(ex => ex.Id == exercise.Id) == false)
+                            {
+                                    Console.WriteLine($"I'm in here!!!!!!!!!!!!!");
+                                    cmd.CommandText += $"INSERT INTO AssignedExercise (StudentId, ExerciseId) OUTPUT INSERTED.Id Values ({cohortStudent.Id}, @getExerciseId)";
+
+                            }
+                    }
+
+                    cmd.Parameters.Add(new SqlParameter("@getExerciseId", exercise.Id));
+
+                    //Use this if you don't need to return anything
+                    cmd.ExecuteNonQuery();
+
+                    //use int id = (int)cmd.ExecuteScalar(); if you need to return an id in the first column
+                }
+
+            }
+
+        }
 
     }
 

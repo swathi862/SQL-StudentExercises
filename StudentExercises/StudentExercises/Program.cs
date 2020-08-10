@@ -79,17 +79,23 @@ namespace StudentExercises
             //}
 
             Console.WriteLine();
-            Console.WriteLine("List of Student:");
+            Console.WriteLine("Assign Exercise to entire Cohort");
+            studentExercises.AssignExerciseToCohort(new Exercise { Id = 9 }, new Cohort { Id = 3 });
+
+            Console.WriteLine();
+            Console.WriteLine("List of Students:");
 
             List<Student> listOfAllStudents = studentExercises.GetAllStudents();
 
             foreach (Student s in listOfAllStudents)
             {
-                //Console.WriteLine($"{s.Id} {ae.StudentId} {ae.ExerciseId}");
+                Console.Write($"{s.FirstName} {s.LastName} from {s.Cohort.Name} has been assigned {s.assignedExercises.Count} exercises (");
+
                 foreach (Exercise ex in s.assignedExercises)
                 {
-                    Console.WriteLine($"{s.Cohort.Name}: {s.FirstName} {s.LastName} {ex.Name}");
+                     Console.Write($"'{ex.Name}',");
                 }
+                Console.WriteLine(").");
             }
 
 
